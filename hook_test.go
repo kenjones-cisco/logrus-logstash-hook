@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/sirupsen/logrus"
 )
@@ -61,5 +62,28 @@ func TestFireWriteError(t *testing.T) {
 
 	if err := h.Fire(&logrus.Entry{Data: logrus.Fields{}}); err == nil {
 		t.Error("expected Fire to return error")
+	}
+}
+
+func TestFireAsync(t *testing.T) {
+	buffer := bytes.NewBuffer(nil)
+	h := New(buffer, simpleFmter{})
+	h.Async()
+
+	entry := &logrus.Entry{
+		Message: "my async message",
+		Data:    logrus.Fields{},
+	}
+
+	err := h.Fire(entry)
+	if err != nil {
+		t.Error("expected Fire to not return error")
+	}
+
+	time.Sleep(100 * time.Millisecond)
+
+	expected := "msg: \"my async message\""
+	if buffer.String() != expected {
+		t.Errorf("expected to see '%s' in '%s'", expected, buffer.String())
 	}
 }

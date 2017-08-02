@@ -12,6 +12,7 @@ type Hook struct {
 	writer    io.Writer
 	formatter logrus.Formatter
 	levels    []logrus.Level
+	async     bool
 }
 
 // New returns a new logrus.Hook for Logstash.
@@ -25,6 +26,7 @@ func New(w io.Writer, f logrus.Formatter) *Hook {
 		writer:    w,
 		formatter: f,
 		levels:    logrus.AllLevels,
+		async:     false,
 	}
 }
 
@@ -32,7 +34,13 @@ func New(w io.Writer, f logrus.Formatter) *Hook {
 // Hook's formatter is used to format the entry into Logstash format
 // and Hook's writer is used to write the formatted entry to the Logstash instance.
 func (h *Hook) Fire(entry *logrus.Entry) error {
-	return h.fire(entry)
+	if !h.async {
+		return h.fire(entry)
+	}
+
+	// send log asynchroniously and return no error.
+	go h.fire(entry)
+	return nil
 }
 
 // Levels returns all logrus levels.
@@ -43,6 +51,12 @@ func (h *Hook) Levels() []logrus.Level {
 // SetLevels sets logging level to fire this hook.
 func (h *Hook) SetLevels(levels []logrus.Level) {
 	h.levels = levels
+}
+
+// Async sets async flag and send log asynchroniously.
+// If use this option, Fire() does not return error.
+func (h *Hook) Async() {
+	h.async = true
 }
 
 func (h *Hook) fire(entry *logrus.Entry) error {
