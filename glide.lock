@@ -1,0 +1,12 @@
+hash: 18d39fcdf6ed3570f689e47173fb0bcfa5a75915733b4885832077114f831ef2
+updated: 2017-08-02T15:00:47.9903729Z
+imports:
+- name: github.com/sirupsen/logrus
+  version: a3f95b5c423586578a4e099b11a46c2479628cac
+- name: golang.org/x/sys
+  version: e312636bdaa2fac4f0acde9d17ab9fbad2b4ad10
+  subpackages:
+  - unix
+- name: gopkg.in/fatih/pool.v2
+  version: 6e328e67893eb46323ad06f0e92cb9536babbabc
+testImports: []

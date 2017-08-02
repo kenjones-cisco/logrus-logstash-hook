@@ -24,3 +24,11 @@ _testmain.go
 *.test
 *.prof
 *.iml
+*.swp
+
+vendor/
+.glide/
+tmp/
+
+cover/
+*.txt
