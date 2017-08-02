@@ -30,6 +30,8 @@ func TestFire(t *testing.T) {
 		t.Error("expected Fire to not return error")
 	}
 
+	h.Flush() // does nothing; should result in immediate return
+
 	expected := "msg: \"my message\""
 	if buffer.String() != expected {
 		t.Errorf("expected to see '%s' in '%s'", expected, buffer.String())
@@ -46,6 +48,8 @@ func TestFireFormatError(t *testing.T) {
 	buffer := bytes.NewBuffer(nil)
 	h := New(buffer, failFmt{})
 
+	defer h.Flush() // does nothing; should result in immediate return
+
 	if err := h.Fire(&logrus.Entry{Data: logrus.Fields{}}); err == nil {
 		t.Error("expected Fire to return error")
 	}
@@ -54,21 +58,39 @@ func TestFireFormatError(t *testing.T) {
 type failWrite struct{}
 
 func (w failWrite) Write(d []byte) (int, error) {
-	return 0, errors.New("")
+	return 0, errors.New("failed to write")
 }
 
 func TestFireWriteError(t *testing.T) {
 	h := New(failWrite{}, &logrus.JSONFormatter{})
+
+	defer h.Flush() // does nothing; should result in immediate return
 
 	if err := h.Fire(&logrus.Entry{Data: logrus.Fields{}}); err == nil {
 		t.Error("expected Fire to return error")
 	}
 }
 
+func TestFireWriteErrorBufferAsync(t *testing.T) {
+	h := New(failWrite{}, &logrus.JSONFormatter{})
+	h.AsyncBuffer(10)
+
+	if err := h.Fire(&logrus.Entry{Data: logrus.Fields{}}); err != nil {
+		t.Error("unexpected error when in async mode")
+	}
+
+	h.Flush()
+	// Output:
+	// Error during sending message to logstash: failed to write
+
+}
+
 func TestFireAsync(t *testing.T) {
 	buffer := bytes.NewBuffer(nil)
 	h := New(buffer, simpleFmter{})
 	h.Async()
+
+	defer h.Flush() // does nothing; should result in immediate return
 
 	entry := &logrus.Entry{
 		Message: "my async message",
@@ -81,6 +103,30 @@ func TestFireAsync(t *testing.T) {
 	}
 
 	time.Sleep(100 * time.Millisecond)
+
+	expected := "msg: \"my async message\""
+	if buffer.String() != expected {
+		t.Errorf("expected to see '%s' in '%s'", expected, buffer.String())
+	}
+}
+
+func TestFireAsyncBuffer(t *testing.T) {
+	buffer := bytes.NewBuffer(nil)
+	h := New(buffer, simpleFmter{})
+	h.AsyncBuffer(0)
+
+	entry := &logrus.Entry{
+		Message: "my async message",
+		Data:    logrus.Fields{},
+	}
+
+	err := h.Fire(entry)
+	if err != nil {
+		t.Error("expected Fire to not return error")
+	}
+
+	// wait for the buffer to be processed
+	h.Flush()
 
 	expected := "msg: \"my async message\""
 	if buffer.String() != expected {
