@@ -16,6 +16,7 @@ import (
 type Hook struct {
 	writer    io.Writer
 	formatter logrus.Formatter
+	levels    []logrus.Level
 }
 
 // New returns a new logrus.Hook for Logstash.
@@ -25,16 +26,17 @@ type Hook struct {
 // conn, _ := net.Dial("tcp", "logstash.corp.io:9999")
 // hook := logrustash.New(conn, logrustash.DefaultFormatter())
 func New(w io.Writer, f logrus.Formatter) logrus.Hook {
-	return Hook{
+	return &Hook{
 		writer:    w,
 		formatter: f,
+		levels:    logrus.AllLevels,
 	}
 }
 
 // Fire takes, formats and sends the entry to Logstash.
 // Hook's formatter is used to format the entry into Logstash format
 // and Hook's writer is used to write the formatted entry to the Logstash instance.
-func (h Hook) Fire(e *logrus.Entry) error {
+func (h *Hook) Fire(e *logrus.Entry) error {
 	dataBytes, err := h.formatter.Format(e)
 	if err != nil {
 		return err
@@ -44,8 +46,13 @@ func (h Hook) Fire(e *logrus.Entry) error {
 }
 
 // Levels returns all logrus levels.
-func (h Hook) Levels() []logrus.Level {
-	return logrus.AllLevels
+func (h *Hook) Levels() []logrus.Level {
+	return h.levels
+}
+
+// SetLevels sets logging level to fire this hook.
+func (h *Hook) SetLevels(levels []logrus.Level) {
+	h.levels = levels
 }
 
 // Using a pool to re-use of old entries when formatting Logstash messages.
