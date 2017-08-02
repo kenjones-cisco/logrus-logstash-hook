@@ -8,7 +8,7 @@ set -o pipefail
 #   - normative_definitions.go is generated code so static analysis will always have some issue
 #   - when using defer there is no way to check to returned value so ignore
 gometalinter \
-    --exclude='error return value not checked.*(Close|Log|Print).*\(errcheck\)$' \
+    --exclude='error return value not checked.*(go|Close|Log|Print).*\(errcheck\)$' \
     --disable=aligncheck \
     --disable=dupl \
     --disable=gotype \

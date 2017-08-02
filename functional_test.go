@@ -151,3 +151,66 @@ func TestUDPWritter(t *testing.T) {
 
 	log.Info("this is an information message")
 }
+
+type simpleFmter struct{}
+
+func (f simpleFmter) Format(e *logrus.Entry) ([]byte, error) {
+	return []byte(fmt.Sprintf("msg: %#v", e.Message)), nil
+}
+
+var warnLevels = []logrus.Level{
+	logrus.PanicLevel,
+	logrus.FatalLevel,
+	logrus.ErrorLevel,
+	logrus.WarnLevel,
+}
+
+func TestFireWithLevels(t *testing.T) {
+	buffer := bytes.NewBuffer(nil)
+	h := logrustash.New(buffer, simpleFmter{})
+	h.SetLevels(warnLevels)
+
+	logger := logrus.New()
+	logger.Hooks.Add(h)
+
+	testData := []struct {
+		level    logrus.Level
+		message  string
+		expected string
+	}{
+		{
+			logrus.DebugLevel,
+			"debug",
+			"",
+		},
+		{
+			logrus.WarnLevel,
+			"warn",
+			"msg: \"warn\"",
+		},
+	}
+
+	for _, test := range testData {
+		// reset the buffer to avoid getting messages from previous test
+		buffer.Reset()
+
+		switch test.level {
+		case logrus.DebugLevel:
+			logger.Debug(test.message)
+		case logrus.InfoLevel:
+			logger.Info(test.message)
+		case logrus.WarnLevel:
+			logger.Warn(test.message)
+		case logrus.ErrorLevel:
+			logger.Error(test.message)
+		case logrus.FatalLevel:
+			logger.Fatal(test.message)
+		case logrus.PanicLevel:
+			logger.Panic(test.message)
+		}
+
+		if buffer.String() != test.expected {
+			t.Errorf("expected to see '%s' in '%s'", test.expected, buffer.String())
+		}
+	}
+}
