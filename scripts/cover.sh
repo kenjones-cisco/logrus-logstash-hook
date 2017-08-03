@@ -17,17 +17,24 @@ generate_cover_data() {
         for subpkg in $(go list ${pkg});
         do
             f="$workdir/$(echo $subpkg | tr / -).cover"
-            go test -v -covermode="$mode" -coverprofile="$f" "$subpkg"
+            go test -v -covermode="$mode" -coverprofile="$f" "$subpkg" >> test.out
         done
     done
 
+    set -- "$workdir"/*.cover
+    if [ ! -f "$1" ]; then
+        echo "No Test Cases"; exit 0
+    fi
     echo "mode: $mode" >"$profile"
     grep -h -v "^mode:" "$workdir"/*.cover >>"$profile"
+    # display actual test results
+    cat test.out || :
 }
 
 show_html_report() {
     go tool cover -html="$profile" -o="$workdir"/coverage.html
 }
 
+rm -f test.out
 generate_cover_data
 show_html_report

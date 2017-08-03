@@ -72,6 +72,17 @@ func (h *Hook) SetLevels(levels []logrus.Level) {
 	h.levels = levels
 }
 
+// UsePool creates a connection pool for logstash to enable support for handling
+// connection failures, use of multiple logstash instances within a cluster.
+func (h *Hook) UsePool(hosts []string, initialCap, maxCap int) error {
+	p, err := newPool(hosts, initialCap, maxCap)
+	if err != nil {
+		return err
+	}
+	h.writer = p
+	return nil
+}
+
 // Async sets async flag and send log asynchroniously.
 // If use this option, Fire() does not return error.
 func (h *Hook) Async() {

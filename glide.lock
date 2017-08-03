@@ -1,6 +1,8 @@
-hash: 18d39fcdf6ed3570f689e47173fb0bcfa5a75915733b4885832077114f831ef2
-updated: 2017-08-02T15:00:47.9903729Z
+hash: a378bc50005b97337bbe11aaf2fbfd36d71d17a335a316f9315a6c62acb2d053
+updated: 2017-08-02T20:42:30.212857Z
 imports:
+- name: github.com/bitly/go-hostpool
+  version: c32c3660406ef1ea14936cc9282e174fe8508c42
 - name: github.com/sirupsen/logrus
   version: a3f95b5c423586578a4e099b11a46c2479628cac
 - name: golang.org/x/sys

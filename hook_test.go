@@ -133,3 +133,25 @@ func TestFireAsyncBuffer(t *testing.T) {
 		t.Errorf("expected to see '%s' in '%s'", expected, buffer.String())
 	}
 }
+
+func TestUsePool(t *testing.T) {
+	h := New(nil, simpleFmter{})
+	hosts := []string{address}
+	err := h.UsePool(hosts, initCap, maxCap)
+	if err != nil {
+		t.Error("expected UsePool to not return error")
+	}
+}
+
+func TestUsePoolError(t *testing.T) {
+	h := New(nil, simpleFmter{})
+	hosts := []string{"127.0.0.1:7778"}
+	err := h.UsePool(hosts, initCap, maxCap)
+	if err == nil {
+		t.Error("expected UsePool to return error")
+	}
+	expected := "factory is not able to fill the pool: dial tcp 127.0.0.1:7778: getsockopt: connection refused"
+	if expected != err.Error() {
+		t.Errorf("expected to see '%s' in '%s'", expected, err.Error())
+	}
+}

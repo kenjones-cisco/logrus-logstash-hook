@@ -3,3 +3,4 @@ import:
 - package: github.com/sirupsen/logrus
   version: ^1.0.2
 - package: gopkg.in/fatih/pool.v2
+- package: github.com/bitly/go-hostpool

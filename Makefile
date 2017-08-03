@@ -111,3 +111,4 @@ cover: check
 	@rm -rf cover/
 	@mkdir -p cover
 	${DOCKERRUN} bash ./scripts/cover.sh
+	@chmod 644 cover/coverage.html
