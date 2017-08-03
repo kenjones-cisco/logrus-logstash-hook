@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"net"
 	"testing"
 	"time"
 
@@ -153,5 +154,83 @@ func TestUsePoolError(t *testing.T) {
 	expected := "factory is not able to fill the pool: dial tcp 127.0.0.1:7778: getsockopt: connection refused"
 	if expected != err.Error() {
 		t.Errorf("expected to see '%s' in '%s'", expected, err.Error())
+	}
+}
+
+func TestSetTimeout_Ignored(t *testing.T) {
+	buffer := bytes.NewBuffer(nil)
+	h := New(buffer, simpleFmter{})
+	h.SetTimeout(time.Duration(1) * time.Second)
+
+	entry := &logrus.Entry{
+		Message: "my message",
+		Data:    logrus.Fields{},
+	}
+
+	err := h.Fire(entry)
+	if err != nil {
+		t.Error("expected Fire to not return error")
+	}
+
+	h.Flush() // does nothing; should result in immediate return
+
+	expected := "msg: \"my message\""
+	if buffer.String() != expected {
+		t.Errorf("expected to see '%s' in '%s'", expected, buffer.String())
+	}
+}
+
+func TestSetTimeout_Used(t *testing.T) {
+	conn, err := net.Dial(network, address)
+	if err != nil {
+		t.Error("Expected successful connection to simpleTCPServer")
+	}
+	h := New(conn, simpleFmter{})
+	h.SetTimeout(time.Duration(1) * time.Second)
+
+	entry := &logrus.Entry{
+		Message: "my message with timeout",
+		Data:    logrus.Fields{},
+	}
+
+	err = h.Fire(entry)
+	if err != nil {
+		t.Error("expected Fire to not return error")
+	}
+
+	time.Sleep(100 * time.Millisecond)
+
+	expected := "msg: \"my message with timeout\""
+	got := srvBuffer.String()
+	if got != expected {
+		t.Errorf("expected to see '%s' in '%s'", expected, got)
+	}
+}
+
+func TestSetTimeout_ConnectionPool(t *testing.T) {
+	h := New(nil, simpleFmter{})
+	hosts := []string{address}
+	err := h.UsePool(hosts, initCap, maxCap)
+	if err != nil {
+		t.Error("expected UsePool to not return error")
+	}
+	h.SetTimeout(time.Duration(1) * time.Second)
+
+	entry := &logrus.Entry{
+		Message: "my message with timeout",
+		Data:    logrus.Fields{},
+	}
+
+	err = h.Fire(entry)
+	if err != nil {
+		t.Error("expected Fire to not return error")
+	}
+
+	time.Sleep(100 * time.Millisecond)
+
+	expected := "msg: \"my message with timeout\""
+	got := srvBuffer.String()
+	if got != expected {
+		t.Errorf("expected to see '%s' in '%s'", expected, got)
 	}
 }

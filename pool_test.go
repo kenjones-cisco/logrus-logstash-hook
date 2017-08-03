@@ -9,18 +9,38 @@ import (
 )
 
 var (
-	initCap = 3
-	maxCap  = 5
-	network = "tcp"
-	address = "127.0.0.1:7777"
+	initCap   = 3
+	maxCap    = 5
+	network   = "tcp"
+	address   = "127.0.0.1:7777"
+	srvBuffer *serverBuffer
 )
 
 func init() {
+	srvBuffer = &serverBuffer{}
+
 	// used for factory function
 	go simpleTCPServer()
 	time.Sleep(time.Millisecond * 300) // wait until tcp server has been settled
 
 	rand.Seed(time.Now().UTC().UnixNano())
+}
+
+type serverBuffer struct {
+	buf []byte
+	err error
+}
+
+func (s *serverBuffer) GetData() []byte {
+	return s.buf
+}
+
+func (s *serverBuffer) String() string {
+	return string(s.buf)
+}
+
+func (s *serverBuffer) Error() string {
+	return s.err.Error()
 }
 
 func simpleTCPServer() {
@@ -37,18 +57,26 @@ func simpleTCPServer() {
 		}
 
 		go func() {
-			buffer := make([]byte, 256)
-			_, _ = conn.Read(buffer)
+			buf := make([]byte, 256)
+			n, err := conn.Read(buf)
+			if err != nil {
+				srvBuffer.err = err
+				srvBuffer.buf = []byte{}
+			} else {
+				srvBuffer.buf = buf[:n]
+				srvBuffer.err = nil
+			}
 		}()
 	}
 }
 
 func TestNewPool(t *testing.T) {
 	hosts := []string{address}
-	_, err := newPool(hosts, initCap, maxCap)
+	pool, err := newPool(hosts, initCap, maxCap)
 	if err != nil {
 		t.Errorf("newPool error: %s", err)
 	}
+	defer pool.Close()
 }
 
 func TestNewPoolError_BadRange(t *testing.T) {
@@ -81,6 +109,7 @@ func TestWrite(t *testing.T) {
 	if err != nil {
 		t.Errorf("newPool error: %s", err)
 	}
+	defer pool.Close()
 
 	data := []byte("sample data")
 	n, werr := pool.Write(data)
@@ -99,6 +128,7 @@ func TestWriteError(t *testing.T) {
 	if err != nil {
 		t.Errorf("newPool error: %s", err)
 	}
+	defer pool.Close()
 
 	pool.conns.Close()
 
@@ -112,4 +142,25 @@ func TestWriteError(t *testing.T) {
 		t.Errorf("expected to see '%s' in '%s'", expected, werr.Error())
 	}
 
+}
+
+func TestWriteTimeout(t *testing.T) {
+	hosts := []string{address}
+	pool, err := newPool(hosts, initCap, maxCap)
+	if err != nil {
+		t.Errorf("newPool error: %s", err)
+	}
+	defer pool.Close()
+
+	ms := time.Duration(500) * time.Millisecond
+	_ = pool.SetWriteDeadline(time.Now().Add(ms))
+
+	data := []byte("sample data")
+	n, werr := pool.Write(data)
+	if werr != nil {
+		t.Errorf("Write error: %s", werr)
+	}
+	if n != len(data) {
+		t.Errorf("expected to see '%d' in '%d'", len(data), n)
+	}
 }

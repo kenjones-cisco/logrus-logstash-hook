@@ -2,6 +2,7 @@ package logrustash
 
 import (
 	"net"
+	"time"
 
 	"github.com/bitly/go-hostpool"
 	"gopkg.in/fatih/pool.v2"
@@ -9,10 +10,13 @@ import (
 
 // maxRetries is temporary until it is made configurable
 const maxRetries = 3
+const connectTimeOut = 3 // seconds
 
 type logstashPool struct {
-	hosts hostpool.HostPool
-	conns pool.Pool
+	net.Conn
+	hosts   hostpool.HostPool
+	conns   pool.Pool
+	timeout time.Time
 }
 
 func newPool(hosts []string, initialCap, maxCap int) (*logstashPool, error) {
@@ -36,13 +40,24 @@ func makeFactory(hosts hostpool.HostPool, totalHosts int) pool.Factory {
 		for conn == nil && attempts < totalHosts {
 			attempts++
 			hostresp := hosts.Get()
-			conn, err = net.Dial("tcp", hostresp.Host())
+			conn, err = net.DialTimeout("tcp", hostresp.Host(), time.Duration(connectTimeOut)*time.Second)
 			if err != nil {
 				hostresp.Mark(err)
 			}
 		}
 		return conn, err
 	}
+}
+
+func (p *logstashPool) SetWriteDeadline(t time.Time) error {
+	p.timeout = t
+	return nil
+}
+
+func (p *logstashPool) Close() error {
+	p.conns.Close()
+	p.hosts.Close()
+	return nil
 }
 
 func (p *logstashPool) Write(data []byte) (n int, err error) {
@@ -57,6 +72,10 @@ func (p *logstashPool) write(data []byte) (n int, err error) {
 		return 0, err
 	}
 	defer conn.Close()
+
+	if p.timeout.After(time.Now()) {
+		_ = conn.SetWriteDeadline(p.timeout)
+	}
 
 	n, err = conn.Write(data)
 	if netErr, ok := err.(net.Error); ok {

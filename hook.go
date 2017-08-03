@@ -1,9 +1,10 @@
 package logrustash
 
 import (
-	"fmt"
 	"io"
+	"net"
 	"sync"
+	"time"
 
 	"github.com/sirupsen/logrus"
 )
@@ -16,6 +17,7 @@ type Hook struct {
 	writer    io.Writer
 	formatter logrus.Formatter
 	levels    []logrus.Level
+	timeout   time.Duration
 	async     bool
 	buf       chan *logrus.Entry
 	wg        sync.WaitGroup
@@ -72,6 +74,11 @@ func (h *Hook) SetLevels(levels []logrus.Level) {
 	h.levels = levels
 }
 
+// SetTimeout sets the duration of time before writing a message timesout.
+func (h *Hook) SetTimeout(d time.Duration) {
+	h.timeout = d
+}
+
 // UsePool creates a connection pool for logstash to enable support for handling
 // connection failures, use of multiple logstash instances within a cluster.
 func (h *Hook) UsePool(hosts []string, initialCap, maxCap int) error {
@@ -117,7 +124,7 @@ func (h *Hook) processBuffer() {
 	for {
 		entry := <-h.buf // receive new entry on channel
 		if err := h.fire(entry); err != nil {
-			fmt.Printf("Error during sending message to logstash: %v\n", err)
+			logrus.Warnf("Error during sending message to logstash: %v\n", err)
 		}
 		h.wg.Done()
 	}
@@ -127,6 +134,11 @@ func (h *Hook) fire(entry *logrus.Entry) error {
 	dataBytes, err := h.formatter.Format(entry)
 	if err != nil {
 		return err
+	}
+	if h.timeout > 0 {
+		if conn, ok := h.writer.(net.Conn); ok {
+			_ = conn.SetWriteDeadline(time.Now().Add(h.timeout))
+		}
 	}
 	_, err = h.writer.Write(dataBytes)
 	return err
