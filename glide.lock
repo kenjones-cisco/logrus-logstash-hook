@@ -1,14 +1,19 @@
-hash: a378bc50005b97337bbe11aaf2fbfd36d71d17a335a316f9315a6c62acb2d053
-updated: 2017-08-02T20:42:30.212857Z
+hash: 281699183f2af9b6f78acc268cb735e13bc51ddaaa92b94ace010a1c833ee010
+updated: 2017-08-25T14:38:22.3307078Z
 imports:
 - name: github.com/bitly/go-hostpool
   version: c32c3660406ef1ea14936cc9282e174fe8508c42
 - name: github.com/sirupsen/logrus
-  version: a3f95b5c423586578a4e099b11a46c2479628cac
+  version: f006c2ac4710855cf0f916dd6b77acf6b048dc6e
+- name: golang.org/x/crypto
+  version: eb71ad9bd329b5ac0fd0148dd99bd62e8be8e035
+  subpackages:
+  - ssh/terminal
 - name: golang.org/x/sys
   version: e312636bdaa2fac4f0acde9d17ab9fbad2b4ad10
   subpackages:
   - unix
+  - windows
 - name: gopkg.in/fatih/pool.v2
   version: 6e328e67893eb46323ad06f0e92cb9536babbabc
 testImports: []

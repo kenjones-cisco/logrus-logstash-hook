@@ -1,6 +1,6 @@
 package: github.com/kenjones-cisco/logrus-logstash-hook
 import:
 - package: github.com/sirupsen/logrus
-  version: ^1.0.2
+  version: ^1.0.3
 - package: gopkg.in/fatih/pool.v2
 - package: github.com/bitly/go-hostpool
